@@ -6,7 +6,7 @@ Requirements
 Installation
 ------------
 
-Until this is published to a Maven repository, add the following lines to either ~/.sbt/plugins/project/PluginBuild.scala (user-specific) or project/plugins/project/PluginBuild.scala (project-specific):
+Until this is published to a Maven repository, add the following lines to either ~/.sbt/plugins/project/PluginBuild.scala (user-specific) or project/plugins/project/PluginBuild.scala (project-specific) or project/project/PluginBuild.scala (project-specific for sbt >=0.12):
 
     import sbt._
     
@@ -19,4 +19,7 @@ This will add the dependency to the plugin. The next step is to configure your b
 
     testListeners <<= target.map(t => Seq(new eu.henkelmann.sbt.JUnitXmlTestsListener(t.getAbsolutePath)))
 
-Note that the line as shown is enough in a *.sbt file. In *.scala files (full configuration), you must collect the result of the expression into the settings of all projects that should produce the XML output.
+Note that the line as shown is enough in a *.sbt file. In *.scala files (full configuration), you must collect the result of the expression into the settings of all projects that should produce the XML output, for example:
+
+    testListeners in Test <<= (target in Test).map(out => Seq(new eu.henkelmann.sbt.JUnitXmlTestsListener(out.getAbsolutePath)))
+
