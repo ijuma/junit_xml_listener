@@ -108,20 +108,36 @@ class JUnitXmlTestsListener(val outputDir:String) extends TestsListener
             result
         }
     }
-    
-    /**The currently running test suite*/
-    var testSuite:TestSuite = null
+
+    val testSuites = new scala.collection.mutable.HashMap[String, TestSuite]
     
     /**Creates the output Dir*/
     override def doInit() = {targetDir.mkdirs()}
     
     /** Starts a new, initially empty Suite with the given name.
      */
-    override def startGroup(name: String) {testSuite = new TestSuite(name)}
+    override def startGroup(name: String) {
+        if(!testSuites.contains(name)){
+          testSuites(name) = new TestSuite(name)
+        }
+    }
     
     /** Adds all details for the given even to the current suite.
      */
-    override def testEvent(event: TestEvent): Unit = for (e <- event.detail) {testSuite.addEvent(e)}
+    override def testEvent(event: TestEvent): Unit = {
+        for (e <- event.detail) {
+            val key : String = e.fullyQualifiedName
+            var testSuite : TestSuite = null
+            if(!testSuites.contains(key)){
+                testSuite = new TestSuite(key)
+                testSuites(key) = testSuite
+            }
+            else{
+                testSuite = testSuites(key)
+            }
+            testSuite.addEvent(e)
+        }
+    }
 
     /** called for each class or equivalent grouping 
      *  We map one group to one Testsuite, so for each Group 
@@ -154,7 +170,8 @@ class JUnitXmlTestsListener(val outputDir:String) extends TestsListener
      *  in the output folder that is named after the suite.
      */
     override def endGroup(name: String, result: TestResult.Value) = {
-        XML.save (new File(targetDir, testSuite.name + ".xml").getAbsolutePath, testSuite.stop(), "UTF-8", true, null)
+        val testSuite : TestSuite = testSuites(name)
+        XML.save (new File(targetDir, "TEST-" + testSuite.name + ".xml").getAbsolutePath, testSuite.stop(), "UTF-8", true, null)
     }
     
     /**Does nothing, as we write each file after a suite is done.*/
