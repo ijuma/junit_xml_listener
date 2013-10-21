@@ -5,11 +5,11 @@ import java.io.{StringWriter, PrintWriter, File}
 import java.net.InetAddress
 import scala.collection.mutable.ListBuffer
 import scala.xml.{Elem, Node, XML}
-import org.scalatools.testing.{Event => TEvent, Result => TResult, Logger => TLogger}
+import sbt.testing.{Event => TEvent, Status => TResult, Logger => TLogger}
 /*
 The api for the test interface defining the results and events
 can be found here: 
-https://github.com/harrah/test-interface
+https://github.com/sbt/test-interface
 */
 
 
@@ -55,7 +55,7 @@ class JUnitXmlTestsListener(val outputDir:String) extends TestsListener
         def count():(Int, Int, Int) = {
             var errors, failures = 0
             for (e <- events) {
-                e.result match {
+                e.status match {
                     case TResult.Error   => errors +=1
                     case TResult.Failure => failures +=1 
                     case _               => 
@@ -78,29 +78,28 @@ class JUnitXmlTestsListener(val outputDir:String) extends TestsListener
                            time={(duration/1000.0).toString} >
                 {properties}
                 {
-                    for (e <- events) yield
-                    <testcase classname={name} name={e.testName} time={"0.0"}> {
-                        var trace:String = if (e.error!=null) {
+                    for (e <- events) yield 
+                    <testcase classname={name} name={e.selector.asInstanceOf[sbt.testing.TestSelector].testName} time={"0.0"}> {
+                        var trace:String = if (e.throwable!=null && e.throwable.isDefined ) {
                             val stringWriter = new StringWriter()
                             val writer = new PrintWriter(stringWriter)
-                            e.error.printStackTrace(writer)
+                            e.throwable.get.printStackTrace(writer)
                             writer.flush()
                             stringWriter.toString
                         }
                         else {
                             ""
                         }
-                        e.result match {
-                            case TResult.Error   if (e.error!=null) => <error message={e.error.getMessage} type={e.error.getClass.getName}>{trace}</error>
+                        e.status match {
+                            case TResult.Error   if (e.throwable!=null && e.throwable.isDefined) => <error message={e.throwable.get.getMessage} type={e.throwable.get.getClass.getName}>{trace}</error>
                             case TResult.Error                      => <error message={"No Exception or message provided"} />
-                            case TResult.Failure if (e.error!=null) => <failure message={e.error.getMessage} type={e.error.getClass.getName}>{trace}</failure>
+                            case TResult.Failure if (e.throwable!=null && e.throwable.isDefined) => <failure message={e.throwable.get.getMessage} type={e.throwable.get.getClass.getName}>{trace}</failure>
                             case TResult.Failure                    => <failure message={"No Exception or message provided"} />
                             case TResult.Skipped                    => <skipped />
                             case _               => {}
                             }
                     }
-                    </testcase>
-                    
+                    </testcase>                    
                 }
                 <system-out><![CDATA[]]></system-out>
                 <system-err><![CDATA[]]></system-err>
